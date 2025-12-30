@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Login | The Huckberry</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --olive-green: #7A8B65;
+            --gold: #D4AF37;
+            --warm-cream: #F8F5F0;
+            --charcoal: #2D2D2D;
+            --light-charcoal: #4A4A4A;
+            --soft-gray: #E8E8E8;
+            --white: #FFFFFF;
+            --transition: all 0.3s ease;
+            --shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background-color: var(--warm-cream);
+            color: var(--charcoal);
+            line-height: 1.6;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .login-container {
+            background: var(--white);
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            width: 100%;
+            max-width: 400px;
+        }
+        .logo {
+            font-family: 'Playfair Display', serif;
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--charcoal);
+            text-align: center;
+            margin-bottom: 10px;
+            display: block;
+            text-decoration: none;
+        }
+        .logo span {
+            color: var(--olive-green);
+        }
+        .subtitle {
+            text-align: center;
+            color: var(--light-charcoal);
+            margin-bottom: 30px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--charcoal);
+        }
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--soft-gray);
+            border-radius: 6px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 16px;
+        }
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--olive-green);
+        }
+        .btn {
+            width: 100%;
+            padding: 12px;
+            background-color: var(--olive-green);
+            color: var(--white);
+            border: none;
+            border-radius: 30px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            font-family: 'DM Sans', sans-serif;
+            font-size: 16px;
+        }
+        .btn:hover {
+            background: var(--charcoal);
+        }
+        .error {
+            color: #e74c3c;
+            text-align: center;
+            margin-top: 15px;
+            font-size: 14px;
+            display: none;
+        }
+        .back-link {
+            display: block;
+            text-align: center;
+            margin-top: 20px;
+            color: var(--olive-green);
+            text-decoration: none;
+        }
+        .back-link:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <a href="index.html" class="logo">The <span>Huckberry</span></a>
+        <p class="subtitle">Admin Dashboard</p>
+        <form id="loginForm" data-testid="admin-login-form">
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" required autocomplete="email" data-testid="admin-email">
+            </div>
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" required autocomplete="current-password" data-testid="admin-password">
+            </div>
+            <button type="submit" class="btn" data-testid="admin-login-btn">Sign In</button>
+        </form>
+        <div class="error" id="errorMessage">Invalid credentials</div>
+        <a href="index.html" class="back-link">← Back to Store</a>
+    </div>
+
+    <script>
+        const API_BASE = '';
+
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/auth/login/json`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ email, password })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    localStorage.setItem('token', data.access_token);
+                    
+                    // Check if user is admin
+                    const meResponse = await fetch(`${API_BASE}/api/auth/me`, {
+                        headers: {
+                            'Authorization': `Bearer ${data.access_token}`
+                        }
+                    });
+                    
+                    if (meResponse.ok) {
+                        const user = await meResponse.json();
+                        if (user.role === 'admin') {
+                            localStorage.setItem('user', JSON.stringify(user));
+                            window.location.href = 'admin.html';
+                        } else {
+                            document.getElementById('errorMessage').textContent = 'Admin access required';
+                            document.getElementById('errorMessage').style.display = 'block';
+                            localStorage.removeItem('token');
+                        }
+                    }
+                } else {
+                    const error = await response.json();
+                    document.getElementById('errorMessage').textContent = error.detail || 'Invalid credentials';
+                    document.getElementById('errorMessage').style.display = 'block';
+                }
+            } catch (err) {
+                console.error('Login error:', err);
+                document.getElementById('errorMessage').textContent = 'Connection failed';
+                document.getElementById('errorMessage').style.display = 'block';
+            }
+        });
+    </script>
+</body>
+</html>
